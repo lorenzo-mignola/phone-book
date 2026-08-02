@@ -10,7 +10,16 @@ permission:
   glob: allow
   grep: allow
   list: allow
-  bash: ask
+  bash:
+    "*": ask
+    "git status *": allow
+    "git show *": allow
+    "git diff *": allow
+    "git log *": allow
+    "cargo check *": allow
+    "cargo clippy *": allow
+    "cargo fmt *": allow
+    "cargo test *": allow
   webfetch: allow
   websearch: allow
   question: allow

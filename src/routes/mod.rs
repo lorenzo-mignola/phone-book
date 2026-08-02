@@ -1,8 +1,7 @@
 pub mod handlers;
 
 use axum::{Router, routing::get};
-use handlers::hello;
 
 pub fn router() -> Router {
-    Router::new().route("/", get(hello))
+    Router::new().route("/", get(handlers::hello))
 }
