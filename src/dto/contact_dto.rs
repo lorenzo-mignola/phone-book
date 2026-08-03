@@ -1,20 +1,25 @@
 use serde::Serialize;
 
-use crate::entity::contacts;
+use crate::{
+    dto::phone_number_dto::PhoneNumberDto, repository::contact_with_numbers::ContactWithNumbers,
+};
 
 #[derive(Serialize)]
 pub struct ContactDto {
     pub id: i32,
     pub first_name: String,
     pub last_name: String,
+    pub phone_numbers: Vec<PhoneNumberDto>,
 }
 
-impl From<contacts::Model> for ContactDto {
-    fn from(model: contacts::Model) -> Self {
+impl From<ContactWithNumbers> for ContactDto {
+    fn from(model: ContactWithNumbers) -> Self {
+        let ContactWithNumbers { contact, numbers } = model;
         Self {
-            id: model.id,
-            first_name: model.first_name,
-            last_name: model.last_name,
+            id: contact.id,
+            first_name: contact.first_name,
+            last_name: contact.last_name.unwrap_or_default(),
+            phone_numbers: numbers.into_iter().map(PhoneNumberDto::from).collect(),
         }
     }
 }

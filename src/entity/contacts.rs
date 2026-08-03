@@ -9,7 +9,7 @@ pub struct Model {
 
     pub first_name: String,
 
-    pub last_name: String,
+    pub last_name: Option<String>,
 
     #[sea_orm(has_many)]
     pub phone_numbers: HasMany<super::phone_numbers::Entity>,
