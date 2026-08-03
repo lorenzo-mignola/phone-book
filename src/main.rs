@@ -1,4 +1,5 @@
 mod db;
+mod entity;
 mod routes;
 mod state;
 
