@@ -1,5 +1,8 @@
 mod db;
+mod dto;
 mod entity;
+mod error;
+mod repository;
 mod routes;
 mod state;
 
