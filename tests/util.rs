@@ -1,4 +1,3 @@
-use axum::Router;
 use axum_test::TestServer;
 use phone_book::entity::{contacts, country_code::CountryCode, number::Number, phone_numbers};
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectOptions, Database, DatabaseConnection};

@@ -13,7 +13,7 @@ pub enum AppError {
 }
 
 #[derive(Serialize)]
-pub struct ErrorBody {
+struct ErrorBody {
     message: String,
 }
 
