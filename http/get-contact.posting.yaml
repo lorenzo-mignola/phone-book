@@ -1,0 +1,2 @@
+name: GET contact
+url: http://localhost:3000/contacts/1
