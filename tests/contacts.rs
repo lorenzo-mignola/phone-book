@@ -1,19 +1,15 @@
-use axum::{
-    body::Body,
-    http::{Request, StatusCode},
-};
-use tower::ServiceExt;
+use serde_json::Value;
 
 mod util;
 
 #[tokio::test]
 async fn should_get_all_contacts() {
-    let app = util::setup_test().await;
+    let server = util::setup_test().await;
 
-    let response = app
-        .oneshot(Request::get("/contacts").body(Body::empty()).unwrap())
-        .await
-        .unwrap();
+    let response = server.get("/contacts").await;
 
-    assert_eq!(response.status(), StatusCode::OK);
+    response.assert_status_ok();
+
+    let body: Vec<Value> = response.json();
+    assert_eq!(body.len(), 1);
 }
