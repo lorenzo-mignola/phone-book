@@ -10,12 +10,16 @@ pub fn get_connection_string() -> Result<String, Box<dyn Error>> {
     Ok(connection_string)
 }
 
+pub async fn setup_schema(db: &DatabaseConnection) -> Result<(), DbErr> {
+    db.get_schema_registry("phone_book::entity::*")
+        .sync(db)
+        .await
+}
+
 pub async fn connect(connection_string: String) -> Result<DatabaseConnection, DbErr> {
     let db = Database::connect(connection_string).await?;
 
-    db.get_schema_registry("phone_book::entity::*")
-        .sync(&db)
-        .await?;
+    setup_schema(&db).await?;
 
     Ok(db)
 }
