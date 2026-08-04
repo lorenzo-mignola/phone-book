@@ -13,6 +13,6 @@ target
 # Contains mutation testing data
 **/mutants.out*/
 
-data/
-
+data/*
+!data/.gitkeep
 .env
