@@ -1,7 +1,6 @@
 mod contacts;
-mod hello;
 
-use axum::{Router, routing::get};
+use axum::Router;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
@@ -9,7 +8,6 @@ use crate::state::AppState;
 
 pub fn router(state: AppState) -> Router {
     Router::new()
-        .route("/", get(hello::hello))
         .merge(contacts::contacts_router())
         .layer(
             TraceLayer::new_for_http()

@@ -1,8 +1,9 @@
 use sea_orm::DeriveActiveEnum;
 
 use sea_orm::entity::prelude::*;
+use serde::Deserialize;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
 pub enum CountryCode {
     #[sea_orm(string_value = "CH")]

@@ -1,0 +1,16 @@
+name: POST insert contact
+method: POST
+url: http://localhost:3000/contacts
+body:
+  content: |-
+    {
+      "first_name": "POST",
+      "phone_numbers": [{
+        "country_code": "CH",
+        "number": "4321"
+      }]
+    }
+  content_type: application/json
+headers:
+- name: content-type
+  value: application/json

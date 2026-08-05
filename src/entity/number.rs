@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
 use sea_orm::DeriveValueType;
+use serde::Deserialize;
 
-#[derive(Clone, Debug, PartialEq, Eq, DeriveValueType)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveValueType, Deserialize)]
 pub struct Number(pub String);
 
 impl Display for Number {
