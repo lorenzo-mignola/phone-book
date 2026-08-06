@@ -1,8 +1,6 @@
 use axum_test::TestServer;
 use phone_book::entity::{contacts, country_code::CountryCode, number::Number, phone_numbers};
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ConnectOptions, Database, DatabaseConnection, EntityTrait,
-};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectOptions, Database, DatabaseConnection};
 
 async fn connect_in_memory() -> DatabaseConnection {
     let mut opts = ConnectOptions::new("sqlite::memory:");

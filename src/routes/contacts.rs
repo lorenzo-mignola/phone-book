@@ -1,6 +1,7 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
+    http::StatusCode,
     routing::{get, post},
 };
 
@@ -37,26 +38,11 @@ async fn get_contact(
 pub(super) async fn save_contact(
     State(state): State<AppState>,
     Json(create_contact): Json<CreateContactDto>,
-) -> Result<Json<ContactDto>, AppError> {
-    let CreateContactDto {
-        phone_numbers,
-        first_name,
-        last_name,
-    } = create_contact;
-    let contact = CreateContactDto {
-        first_name,
-        last_name,
-        phone_numbers: Vec::new(),
-    }
-    .into();
-
-    let phone_numbers = phone_numbers
-        .into_iter()
-        .map(|number| number.into())
-        .collect();
+) -> Result<(StatusCode, Json<ContactDto>), AppError> {
+    let (contact, phone_numbers) = create_contact.into();
 
     let created_contact =
         repository::contacts::create_contact(&state.db, contact, phone_numbers).await?;
 
-    Ok(Json(created_contact.into()))
+    Ok((StatusCode::CREATED, Json(created_contact.into())))
 }
