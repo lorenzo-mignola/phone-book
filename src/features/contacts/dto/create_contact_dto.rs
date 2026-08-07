@@ -1,10 +1,9 @@
 use sea_orm::ActiveValue::Set;
 use serde::Deserialize;
 
-use crate::{
-    dto::create_phone_number_dto::CreatePhoneNumberDto,
-    entity::{contacts, phone_numbers},
-};
+use crate::entity::{contacts, phone_numbers};
+
+use super::CreatePhoneNumberDto;
 
 #[derive(Deserialize)]
 pub struct CreateContactDto {

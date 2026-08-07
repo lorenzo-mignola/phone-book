@@ -24,7 +24,7 @@ permission:
   websearch: allow
   question: allow
   task: allow
-color: "#DE3C31"
+color: "#F74C00"
 ---
 
 Sei un senior Rust mentor con 15+ anni di esperienza in systems programming.

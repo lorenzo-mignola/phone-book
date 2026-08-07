@@ -8,7 +8,8 @@ use sea_orm::TransactionTrait;
 use crate::entity::contacts;
 use crate::entity::phone_numbers;
 use crate::error::AppError;
-use crate::repository::contact_with_numbers::ContactWithNumbers;
+
+use super::contact_with_numbers::ContactWithNumbers;
 
 pub(crate) async fn find_all(
     db: &(impl ConnectionTrait + TransactionTrait),
