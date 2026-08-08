@@ -82,23 +82,7 @@ pub(crate) async fn update_contact(
         ..
     } = find_by_id(&txn, id).await?;
 
-    phone_numbers::Entity::delete_many()
-        .filter(phone_numbers::Column::ContactId.eq(saved_contact.id))
-        .exec(&txn)
-        .await
-        .map_err(AppError::Db)?;
-
-    let phone_numbers: Vec<phone_numbers::ActiveModel> = phone_numbers
-        .into_iter()
-        .map(|number| phone_numbers::ActiveModel {
-            contact_id: Set(saved_contact.id),
-            ..number
-        })
-        .collect();
-
-    for phone_number in phone_numbers {
-        phone_number.insert(&txn).await.map_err(AppError::Db)?;
-    }
+    delete_existing_phone_numbers(&txn, id, phone_numbers).await?;
 
     let contact = contacts::ActiveModel {
         id: Set(saved_contact.id),
@@ -110,4 +94,30 @@ pub(crate) async fn update_contact(
     txn.commit().await.map_err(AppError::Db)?;
 
     find_by_id(db, saved_contact.id).await
+}
+
+async fn delete_existing_phone_numbers(
+    txn: &(impl ConnectionTrait + TransactionTrait),
+    id: i32,
+    phone_numbers: Vec<phone_numbers::ActiveModel>,
+) -> Result<(), AppError> {
+    phone_numbers::Entity::delete_many()
+        .filter(phone_numbers::Column::ContactId.eq(id))
+        .exec(txn)
+        .await
+        .map_err(AppError::Db)?;
+
+    let phone_numbers: Vec<phone_numbers::ActiveModel> = phone_numbers
+        .into_iter()
+        .map(|number| phone_numbers::ActiveModel {
+            contact_id: Set(id),
+            ..number
+        })
+        .collect();
+
+    for phone_number in phone_numbers {
+        phone_number.insert(txn).await.map_err(AppError::Db)?;
+    }
+
+    Ok(())
 }
