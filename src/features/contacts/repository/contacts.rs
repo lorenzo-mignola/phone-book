@@ -1,7 +1,9 @@
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::Set;
+use sea_orm::ColumnTrait;
 use sea_orm::ConnectionTrait;
 use sea_orm::EntityTrait;
+use sea_orm::QueryFilter;
 use sea_orm::TransactionSession;
 use sea_orm::TransactionTrait;
 
@@ -61,6 +63,49 @@ pub(crate) async fn create_contact(
     for phone_number in phone_numbers {
         phone_number.insert(&txn).await.map_err(AppError::Db)?;
     }
+
+    txn.commit().await.map_err(AppError::Db)?;
+
+    find_by_id(db, saved_contact.id).await
+}
+
+pub(crate) async fn update_contact(
+    db: &(impl ConnectionTrait + TransactionTrait),
+    id: i32,
+    contact: contacts::ActiveModel,
+    phone_numbers: Vec<phone_numbers::ActiveModel>,
+) -> Result<ContactWithNumbers, AppError> {
+    let txn = db.begin().await.map_err(AppError::Db)?;
+
+    let ContactWithNumbers {
+        contact: saved_contact,
+        ..
+    } = find_by_id(&txn, id).await?;
+
+    phone_numbers::Entity::delete_many()
+        .filter(phone_numbers::Column::ContactId.eq(saved_contact.id))
+        .exec(&txn)
+        .await
+        .map_err(AppError::Db)?;
+
+    let phone_numbers: Vec<phone_numbers::ActiveModel> = phone_numbers
+        .into_iter()
+        .map(|number| phone_numbers::ActiveModel {
+            contact_id: Set(saved_contact.id),
+            ..number
+        })
+        .collect();
+
+    for phone_number in phone_numbers {
+        phone_number.insert(&txn).await.map_err(AppError::Db)?;
+    }
+
+    let contact = contacts::ActiveModel {
+        id: Set(saved_contact.id),
+        ..contact
+    };
+
+    let saved_contact = contact.update(&txn).await.map_err(AppError::Db)?;
 
     txn.commit().await.map_err(AppError::Db)?;
 

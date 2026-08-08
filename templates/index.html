@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.lime.min.css">
+  <title>Phone Book</title>
+
+  <style>
+    .phone_number {
+      border: 1px solid #fff;
+      border-radius: 20px;
+      padding: 1rem;
+      list-style: none;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Phone Book</h1>
+    <ul>
+      {% for contact in contacts %}
+      <li class="phone_number">
+        <div>
+          <p style="font-weight: bold;">{{contact.first_name}}</p>
+          <hr />
+          {% for number in contact.phone_numbers %}
+          <p>
+            {{number}}
+          </p>
+          {% endfor %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </main>
+</body>
+
+</html>

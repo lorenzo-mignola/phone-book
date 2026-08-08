@@ -6,42 +6,65 @@ affinché non serva ricostruirlo da zero ogni volta.
 
 ## Panoramica
 
-API REST di una rubrica telefonica (contatti e numeri di telefono) in Rust.
-Crate unico `phone-book` con `src/main.rs` (binario) e `src/lib.rs` (libreria,
-usata anche dai test di integrazione).
+Rubrica telefonica (contatti e numeri di telefono) in Rust: API REST sotto
+`/api` più una piccola UI web servita come HTML (askama). Crate unico
+`phone-book` con `src/main.rs` (binario) e `src/lib.rs` (libreria, usata anche
+dai test di integrazione).
 
 ## Stack
 
 - **axum** 0.8 — web framework
 - **sea-orm** 2.0 (features: `sqlx-sqlite`, `runtime-tokio`, `macros`,
   `with-json`, `schema-sync`, `entity-registry`) — ORM su SQLite
-- **tokio**, **serde**/**serde_json**, **tower-http** (`trace`),
+- **askama** 0.16 + **askama_web** 0.16 (`axum-0.8`) — template engine per la UI
+- **tokio** (`full`), **serde**/**serde_json**, **tower-http** (`trace`),
   **tracing**/**tracing-subscriber**, **dotenvy**
-- Dev: **axum-test** (test di integrazione)
+- Dev: **axum-test** 21.0.0 (test di integrazione)
 
 ## Architettura
 
-Layered, dalla rete al DB:
+Organizzata a feature folder: ogni feature (oggi `contacts`) racchiude i suoi
+layer, dalla rete al DB:
 
 ```
-routes (handler axum) → dto (in/out HTTP) → repository (query, transaction)
-→ entity (modelli sea-orm)
+feature/contacts: routes (handler axum) → service (logica, conversioni DTO)
+→ repository → entity (modelli sea-orm globali in src/entity)
 ```
 
-- `src/main.rs` — bootstrap: dotenv, tracing, `db::connect`, `routes::router`,
-  listener su `0.0.0.0:3000`
-- `src/lib.rs` — dichiara tutti i moduli (`db`, `dto`, `entity`, `error`,
-  `repository`, `routes`, `state`)
+- `src/main.rs` — bootstrap: dotenv, tracing, `db::connect` con `DATABASE_URL`,
+  `routes::router`, listener su `0.0.0.0:3000`
+- `src/lib.rs` — dichiara i moduli (`db`, `entity`, `error`, `features`,
+  `routes`, `state`); `dto`/`repository` non esistono più a livello globale
 - `src/state.rs` — `AppState { db: DatabaseConnection }` (Clone)
 - `src/db.rs` — `connect()` apre il DB e chiama `setup_schema()`, che sincronizza
   lo schema via entity-registry (`get_schema_registry("phone_book::entity::*")`)
 - `src/error.rs` — `AppError { NotFound, Db }` con `IntoResponse` (body JSON)
-- `src/routes/mod.rs` — `router(AppState)`: merge dei sub-router + `TraceLayer`
-- `src/entity/` — `contacts`, `phone_numbers`, `country_code`, `number`
-- `src/dto/` — `contact_dto`, `create_contact_dto`, `phone_number_dto`,
-  `create_phone_number_dto`
-- `src/repository/` — `contacts` (find_all, find_by_id, create_contact),
-  `contact_with_numbers` (struct aggregata `{ contact, numbers }`)
+- `src/routes/mod.rs` — `router(AppState)`:
+  `.nest("/api", contacts::router())` + `.merge(ui_router())` + `TraceLayer`
+- `src/features/mod.rs` — `pub(crate) mod contacts; pub(crate) mod ui;`
+- `src/features/contacts/` — `mod.rs` (riesporta `router` e `index_handler`),
+  `router.rs` (sub-router `/contacts`), `dto/`, `repository/`, `routes/`,
+  `service/`, `view/`
+- `src/features/contacts/router.rs` — `Router<AppState>` senza parametri:
+  GET/POST `/contacts`, GET `/contacts/{id}` (montato sotto `/api`)
+- `src/features/contacts/repository/` — `contacts` (find_all, find_by_id,
+  create_contact), `contact_with_numbers` (struct aggregata `{ contact, numbers }`)
+- `src/features/contacts/service/` — `contacts`: `find_all`, `find_by_id`,
+  `create_contact` (orchestra il repository, splitta i DTO e converte entità →
+  DTO)
+- `src/features/contacts/routes/` — handler axum: `list_contacts`,
+  `get_contact`, `save_contact` (delegano al service)
+- `src/features/contacts/view/` — `index` (template askama, vedi UI sotto)
+- `src/features/ui/` — `mod.rs` + `router.rs`: `ui_router()`
+  (`Router<AppState>`) con GET `/` → `index_handler`
+
+### UI web
+
+- `IndexTemplate` (in `view/index.rs`): `#[derive(Template, WebTemplate)]` con
+  `#[template(path = "index.html")]`, campo `contacts: Vec<ContactDto>`;
+  `index_handler` la popola via `service::contacts::find_all` (accede al DB)
+- `templates/index.html` — pagina HTML (pico.css via CDN) che itera i contatti
+- UI montata da `ui_router()` alla radice (`/`), le API restano sotto `/api`
 
 ## Dominio
 
@@ -51,28 +74,41 @@ routes (handler axum) → dto (in/out HTTP) → repository (query, transaction)
   `number: Number`, `contact_id: i32` (FK)
 - `CountryCode` — enum attivo sea-orm (`CH`, `IT`) con `prefix()` → `+41`/`+39`
 - `Number` — newtype `pub struct Number(pub String)` con `Display`
-- Conversioni con `From`: DTO → `ActiveModel` (in `dto/`), entity → DTO
-  (in `dto/`), tuple `(contact, numeri)` → `ContactWithNumbers` (in `repository/`)
+- Conversioni con `From`:
+  - `CreateContactDto` → `(contacts::ActiveModel, Vec<phone_numbers::ActiveModel>)`
+  - `CreatePhoneNumberDto` → `phone_numbers::ActiveModel`
+  - entity per entity: `(contacts::Model, Vec<phone_numbers::Model>)` →
+    `ContactWithNumbers` (in `repository/`)
+  - `ContactWithNumbers` → `ContactDto` e `phone_numbers::Model` →
+    `phone_number_dto::PhoneNumberDto` (in `dto/`)
 
 ## API
 
-| Metodo | Path             | Body                               | Risposta               |
-|--------|------------------|------------------------------------|------------------------|
-| GET    | `/contacts`      | —                                  | `200` `Vec<ContactDto>` |
-| GET    | `/contacts/{id}` | —                                  | `200` `ContactDto` / `404` |
-| POST   | `/contacts`      | `CreateContactDto`                 | `201` `ContactDto`     |
+| Metodo | Path               | Body                               | Risposta               |
+|--------|--------------------|------------------------------------|------------------------|
+| GET    | `/api/contacts`    | —                                  | `200` `Vec<ContactDto>` |
+| GET    | `/api/contacts/{id}` | —                                  | `200` `ContactDto` / `404` |
+| POST   | `/api/contacts`    | `CreateContactDto`                 | `201` `ContactDto`     |
 
-- `ContactDto`: `{ id, first_name, last_name, phone_numbers }` dove ogni numero
-  è una stringa formattata `"<prefisso> <numero>"` (es. `"+41 1234"`)
+- `ContactDto`: `{ id, first_name, last_name, phone_numbers }` dove `last_name`
+  è `String` (default `""` quando assente) e ogni numero è una stringa formattata
+  `"<prefisso> <numero>"` (es. `"+41 1234"`)
 - `CreateContactDto`: `{ first_name, last_name?, phone_numbers: [{ country_code, number }] }`
-- La creazione è in una transazione (contatto + tutti i numeri) e poi rilancia
-  `find_by_id` per la risposta
+- Creazione: `save_contact` delega a `service::contacts::create_contact`, che
+  splitta `CreateContactDto` in `(contact, numeri)` via `into()`; poi
+  `repository::contacts::create_contact` esegue una transazione (inserisce
+  contatto + tutti i numeri), committa e *dopo il commit* richiama `find_by_id`
+  per restituire il `ContactWithNumbers` completo; il service lo converte in
+  `ContactDto` e il handler risponde `201` (la ricerca per risposta avviene nel
+  repository, le conversioni DTO nel service, non nel handler)
 
 ## Test
 
-- Integrazione in `tests/contacts.rs` (axum-test): list, get, 404, create
-- `tests/util.rs` — `setup_test()`: DB SQLite in-memory, `setup_schema`, seed
-  di un contatto `id=1` con numero `+41 1234`, `TestServer`
+- Integrazione in `tests/contacts.rs` (axum-test): list, get, 404, create —
+  tutte sull'endpoint `/api/contacts`
+- `tests/util.rs` — `setup_test()`: DB SQLite in-memory (max_connections 1),
+  `setup_schema`, seed di un contatto `id=1` con numero `+41 1234`,
+  `TestServer` costruito con `routes::router`
 
 ## Convenzioni
 
