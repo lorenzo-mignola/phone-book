@@ -46,14 +46,15 @@ feature/contacts: routes (handler axum) → service (logica, conversioni DTO)
   `router.rs` (sub-router `/contacts`), `dto/`, `repository/`, `routes/`,
   `service/`, `view/`
 - `src/features/contacts/router.rs` — `Router<AppState>` senza parametri:
-  GET/POST `/contacts`, GET `/contacts/{id}` (montato sotto `/api`)
+  GET/POST `/contacts`, GET/PUT `/contacts/{id}` (montato sotto `/api`)
 - `src/features/contacts/repository/` — `contacts` (find_all, find_by_id,
-  create_contact), `contact_with_numbers` (struct aggregata `{ contact, numbers }`)
+  create_contact, update_contact), `contact_with_numbers` (struct aggregata
+  `{ contact, numbers }`)
 - `src/features/contacts/service/` — `contacts`: `find_all`, `find_by_id`,
-  `create_contact` (orchestra il repository, splitta i DTO e converte entità →
-  DTO)
+  `create_contact`, `update_contact` (orchestra il repository, splitta i DTO e
+  converte entità → DTO)
 - `src/features/contacts/routes/` — handler axum: `list_contacts`,
-  `get_contact`, `save_contact` (delegano al service)
+  `get_contact`, `save_contact`, `update_contact` (delegano al service)
 - `src/features/contacts/view/` — `index` (template askama, vedi UI sotto)
 - `src/features/ui/` — `mod.rs` + `router.rs`: `ui_router()`
   (`Router<AppState>`) con GET `/` → `index_handler`
@@ -89,6 +90,7 @@ feature/contacts: routes (handler axum) → service (logica, conversioni DTO)
 | GET    | `/api/contacts`    | —                                  | `200` `Vec<ContactDto>` |
 | GET    | `/api/contacts/{id}` | —                                  | `200` `ContactDto` / `404` |
 | POST   | `/api/contacts`    | `CreateContactDto`                 | `201` `ContactDto`     |
+| PUT    | `/api/contacts/{id}` | `CreateContactDto`                 | `200` `ContactDto` / `404` |
 
 - `ContactDto`: `{ id, first_name, last_name, phone_numbers }` dove `last_name`
   è `String` (default `""` quando assente) e ogni numero è una stringa formattata
@@ -101,11 +103,17 @@ feature/contacts: routes (handler axum) → service (logica, conversioni DTO)
   per restituire il `ContactWithNumbers` completo; il service lo converte in
   `ContactDto` e il handler risponde `201` (la ricerca per risposta avviene nel
   repository, le conversioni DTO nel service, non nel handler)
+- Aggiornamento: `update_contact` (route) delega a
+  `service::contacts::update_contact`, che splitta il DTO; poi
+  `repository::contacts::update_contact` in transazione verifica che il
+  contatto esista (`404`), sostituisce i numeri (delete + insert) e aggiorna i
+  campi del contatto, committa e *dopo il commit* richiama `find_by_id` per
+  rispondere `200` con il `ContactDto` completo
 
 ## Test
 
-- Integrazione in `tests/contacts.rs` (axum-test): list, get, 404, create —
-  tutte sull'endpoint `/api/contacts`
+- Integrazione in `tests/contacts.rs` (axum-test): list, get, 404, create,
+  update — tutte sull'endpoint `/api/contacts`
 - `tests/util.rs` — `setup_test()`: DB SQLite in-memory (max_connections 1),
   `setup_schema`, seed di un contatto `id=1` con numero `+41 1234`,
   `TestServer` costruito con `routes::router`
