@@ -1,0 +1,2 @@
+name: GET phone numbers
+url: http://localhost:3000/api/contacts/1/phone_numbers
