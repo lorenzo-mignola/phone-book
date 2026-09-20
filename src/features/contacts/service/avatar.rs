@@ -16,11 +16,11 @@ pub(crate) async fn get_avatar(id: i32, state: &AppState) -> Result<Svg, AppErro
         contact.last_name.unwrap_or_default()
     );
 
-    fetch_avatar(user_name).await
+    fetch_avatar(&state.dicebar_url, user_name).await
 }
 
-async fn fetch_avatar(user_name: String) -> Result<Svg, AppError> {
-    let url = format!("https://api.dicebear.com/10.x/blobs/svg?seed={}", user_name);
+async fn fetch_avatar(dicebar_url: &String, user_name: String) -> Result<Svg, AppError> {
+    let url = format!("{}/10.x/blobs/svg?seed={}", dicebar_url, user_name);
 
     let response = reqwest::get(url).await.map_err(|_| AppError::NotFound)?;
 

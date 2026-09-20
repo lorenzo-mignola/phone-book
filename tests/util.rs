@@ -36,10 +36,17 @@ async fn seed_db(db: &DatabaseConnection) {
 }
 
 pub async fn setup_test() -> TestServer {
+    setup_test_with_dicebar("").await
+}
+
+pub async fn setup_test_with_dicebar(dicebar_url: &str) -> TestServer {
     let db = connect_in_memory().await;
 
     seed_db(&db).await;
 
-    let router = phone_book::routes::router(phone_book::state::AppState { db });
+    let router = phone_book::routes::router(phone_book::state::AppState {
+        db,
+        dicebar_url: dicebar_url.to_owned(),
+    });
     TestServer::new(router)
 }

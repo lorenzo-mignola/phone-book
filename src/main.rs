@@ -1,20 +1,17 @@
-use std::env;
-
-use phone_book::{db, routes, state};
+use phone_book::{routes, state::build_state};
 use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenvy::dotenv().ok();
-
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         .init();
 
-    let connection_string = env::var("DATABASE_URL")?;
-    let db_connection = db::connect(connection_string).await?;
+    dotenvy::dotenv().ok();
 
-    let app = routes::router(state::AppState { db: db_connection });
+    let state = build_state().await?;
+
+    let app = routes::router(state);
 
     let address = "0.0.0.0:3000";
     let listener = tokio::net::TcpListener::bind(address).await?;
