@@ -121,3 +121,25 @@ async fn delete_existing_phone_numbers(
 
     Ok(())
 }
+
+pub(crate) async fn delete_by_id(
+    db: &sea_orm::prelude::DatabaseConnection,
+    id: i32,
+) -> Result<(), AppError> {
+    let txn = db.begin().await.map_err(AppError::Db)?;
+
+    phone_numbers::Entity::delete_many()
+        .filter(phone_numbers::Column::ContactId.eq(id))
+        .exec(&txn)
+        .await
+        .map_err(AppError::Db)?;
+
+    contacts::Entity::delete_by_id(id)
+        .exec(&txn)
+        .await
+        .map_err(AppError::Db)?;
+
+    txn.commit().await.map_err(AppError::Db)?;
+
+    Ok(())
+}

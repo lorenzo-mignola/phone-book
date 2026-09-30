@@ -90,3 +90,16 @@ async fn should_update_contact() {
         "phone_numbers": ["+41 1234"]
     }));
 }
+
+#[tokio::test]
+async fn should_delete_contact() {
+    let server = util::setup_test().await;
+
+    let response = server.delete("/api/contacts/1").await;
+
+    response.assert_status(StatusCode::NO_CONTENT);
+
+    let response = server.get("/api/contacts/1").await;
+
+    response.assert_status(StatusCode::NOT_FOUND);
+}

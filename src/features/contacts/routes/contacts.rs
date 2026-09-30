@@ -44,3 +44,12 @@ pub(crate) async fn update_contact(
 
     Ok(Json(contact_updated))
 }
+
+pub(crate) async fn delete_contact(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+) -> Result<(StatusCode, ()), AppError> {
+    service::contacts::delete_by_id(id, &state).await?;
+
+    Ok((StatusCode::NO_CONTENT, ()))
+}

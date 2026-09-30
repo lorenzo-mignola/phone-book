@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
 };
 
 use super::routes;
@@ -12,6 +12,7 @@ pub(crate) fn contacts_router() -> Router<AppState> {
         .route("/contacts", post(routes::contacts::save_contact))
         .route("/contacts/{id}", get(routes::contacts::get_contact))
         .route("/contacts/{id}", put(routes::contacts::update_contact))
+        .route("/contacts/{id}", delete(routes::contacts::delete_contact))
         .route(
             "/contacts/{id}/phone_numbers",
             get(routes::phone_numbers::get_all_phone_number_by_contact_id),

@@ -45,3 +45,9 @@ pub(crate) async fn update_contact(
 
     Ok(udpated_contact.into())
 }
+
+pub(crate) async fn delete_by_id(id: i32, state: &AppState) -> Result<(), AppError> {
+    repository::contacts::delete_by_id(&state.db, id).await?;
+
+    Ok(())
+}
